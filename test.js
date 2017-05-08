@@ -29,7 +29,7 @@ describe('Koa actuator', () => {
         .expect(200)
         .end((err, res) => {
           if (err) return done(err);
-          assert.isDefined(res.body.application.version);
+          assert.isDefined(res.body.build.version);
           done();
         });
     });
@@ -46,7 +46,7 @@ describe('Koa actuator', () => {
         .expect(200)
         .end((err, res) => {
           if (err) return done(err);
-          assert.equal(res.body.TEST_VAR, 'test');
+          assert.equal(res.body.systemEnvironment.TEST_VAR, 'test');
           done();
         });
     });
@@ -63,9 +63,27 @@ describe('Koa actuator', () => {
         .expect(200)
         .end((err, res) => {
           if (err) return done(err);
-          assert.equal(res.body.TEST_VAR, 'test');
-          assert.equal(res.body.USERNAME, '*******');
-          assert.equal(res.body.PASSWORD, '*******');
+          assert.equal(res.body.systemEnvironment.TEST_VAR, 'test');
+          assert.equal(res.body.systemEnvironment.USERNAME, '*******');
+          assert.equal(res.body.systemEnvironment.PASSWORD, '*******');
+          done();
+        });
+    });
+  });
+
+  describe('/metrics', () => {
+    it('should return 200 and show some service info (like uptime, heap usage etc)', (done) => {
+      //act & assert
+      request
+        .get('/metrics')
+        .expect(200)
+        .end((err, res) => {
+          if (err) return done(err);
+          assert.property(res.body, 'uptime');
+          assert.property(res.body, 'processors');
+          assert.property(res.body, 'heap');
+          assert.property(res.body, 'heap.used');
+          assert.deepProperty(res.body, 'resources.memory');
           done();
         });
     });

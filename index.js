@@ -7,6 +7,7 @@ const package_json = require(appRootPath + path.sep +'package.json');
 const HEALTH_PATH = '/health';
 const ENV_PATH = '/env';
 const INFO_PATH = '/info';
+const METRICS_PATH = '/metrics';
 const SECURE_PROP_NAMES = ['admin', 'user', 'password', 'pass', 'pwd', 'login', 'username'];
 
 /**
@@ -15,6 +16,23 @@ const SECURE_PROP_NAMES = ['admin', 'user', 'password', 'pass', 'pwd', 'login', 
 async function health(ctx, next) {
   if (HEALTH_PATH == ctx.path)
     ctx.body = {status: 'UP'};
+  else
+    await next();
+}
+
+/**
+ * Exposes application and resources information. E.g. name, version.
+ */
+async function info(ctx, next) {
+  if (INFO_PATH == ctx.path)
+    ctx.body = {build:
+      {
+        version: package_json.version,
+        name: package_json.name,
+        main: package_json.main,
+        description: package_json.description
+      }
+    };
   else
     await next();
 }
@@ -36,7 +54,7 @@ async function env(ctx, next) {
         return false;
       })
       .forEach(property => {envCopy[property] = '*******'}); //hide secure details
-    ctx.body = envCopy;
+    ctx.body = {systemEnvironment: envCopy, arguments: process.argv};
   } else {
     await next();
   }
@@ -45,23 +63,17 @@ async function env(ctx, next) {
 /**
  * Exposes application and resources information. E.g. name, version, memory and CPU usage
  */
-async function info(ctx, next) {
-  if (INFO_PATH == ctx.path) {
+async function metrics(ctx, next) {
+  if (METRICS_PATH == ctx.path) {
+    const memory = process.memoryUsage();
     ctx.body = {
       timestamp: Date.now(),
       uptime: process.uptime(),
-
-      application: {
-        name: package_json.name,
-        version: package_json.version,
-        pid: process.pid,
-        title: process.title,
-        argv: process.argv,
-        node_env: process.env.NODE_ENV
-      },
-
+      processors: os.cpus().length,
+      heap: memory.heapTotal,
+      "heap.used": memory.heapUsed,
       resources: {
-        memory: process.memoryUsage(),
+        memory: memory,
         loadavg: os.loadavg(),
         cpu: JSON.stringify(os.cpus()),
         nics: JSON.stringify(os.networkInterfaces())
@@ -72,4 +84,5 @@ async function info(ctx, next) {
   }
 }
 
-module.exports = compose([health, env, info]);
+
+module.exports = compose([health, env, info, metrics]);
